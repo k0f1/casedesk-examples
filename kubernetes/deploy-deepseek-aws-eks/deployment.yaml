@@ -36,6 +36,12 @@ spec:
           env:
             - name: OLLAMA_MODELS
               value: /root/.ollama/models
+          readinessProbe:
+            httpGet:
+              path: /api/tags
+              port: 11434
+            initialDelaySeconds: 10
+            periodSeconds: 5
       initContainers:
         - name: pull-model
           image: ollama/ollama:latest
