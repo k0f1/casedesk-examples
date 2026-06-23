@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-inference
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deepseek
+  namespace: ai-inference
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deepseek
+  template:
+    metadata:
+      labels:
+        app: deepseek
+    spec:
+      containers:
+        - name: ollama
+          image: ollama/ollama:latest
+          ports:
+            - containerPort: 11434
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+              memory: "16Gi"
+            requests:
+              nvidia.com/gpu: 1
+              memory: "8Gi"
+          volumeMounts:
+            - name: ollama-data
+              mountPath: /root/.ollama
+          env:
+            - name: OLLAMA_MODELS
+              value: /root/.ollama/models
+      initContainers:
+        - name: pull-model
+          image: ollama/ollama:latest
+          command: ["ollama", "pull", "deepseek-r1:7b"]
+          env:
+            - name: OLLAMA_HOST
+              value: "http://localhost:11434"
+          volumeMounts:
+            - name: ollama-data
+              mountPath: /root/.ollama
+      volumes:
+        - name: ollama-data
+          emptyDir: {}
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: deepseek
+  namespace: ai-inference
+spec:
+  selector:
+    app: deepseek
+  ports:
+    - port: 11434
+      targetPort: 11434
